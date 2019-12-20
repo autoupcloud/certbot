@@ -1,6 +1,12 @@
 """Tests for AugeasParserNode classes"""
 import mock
 
+try:
+    import apacheconfig  # pylint: disable=import-error,unused-import
+    APACHEV2 = True
+except ImportError:  # pragma: no cover
+    APACHEV2 = False
+
 from acme.magic_typing import List  # pylint: disable=unused-import, no-name-in-module
 from certbot import errors
 
@@ -19,6 +25,22 @@ class AugeasParserNodeTest(util.ApacheTest):  # pylint: disable=too-many-public-
             self.config_path, self.vhost_path, self.config_dir, self.work_dir)
         self.vh_truth = util.get_vh_truth(
             self.temp_dir, "debian_apache_2_4/multiple_vhosts")
+
+        # Generic node tests against the `parser_root`. Augeas-specific tests
+        # can be performed on `augeas_root`.
+        self.parser_root = self.config.parser_root
+        self.augeas_root = self.config.parser_root.primary
+        # If apacheconfig isn't included, we only want to test against
+        # the AugeasParserNodes.
+        if not APACHEV2:  # pragma: no cover
+            self.parser_root = self.augeas_root
+
+    def _augeas_metadata(self, obj):
+        # If apacheconfig isn't included, we're already testing against
+        # primary.
+        if APACHEV2:
+            return obj.primary.metadata
+        return obj.metadata  # pragma: no cover
 
     def test_save(self):
         with mock.patch('certbot_apache.parser.ApacheParser.save') as mock_save:
